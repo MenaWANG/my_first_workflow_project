@@ -1,0 +1,77 @@
+---
+title: "Quick EDA with Crosstab"
+author: "Mena WANG"
+date: "13/10/2022"
+output: 
+  html_document:
+    toc: false
+    toc_float: false
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      message = FALSE,
+                      warning = FALSE)
+
+library(here)
+library(tidyverse)
+library(janitor)
+
+df <- read_csv(here::here("Data","german_credit_data.csv")) #https://www.kaggle.com/datasets/kabure/german-credit-data-with-risk 
+
+df <- df %>% rename(ID = "...1", 
+                    credit_risk = Risk)
+
+df <- df %>% 
+  janitor::clean_names() 
+
+```
+
+
+# 💡Quick EDA for feature selection in classification models
+
+Sometimes in machine learning, we would like to get a quick overview of the relationship between the target and all the potential features.  
+
+The problem is, features come in different types and shapes. For example, some features are categorical, some are numerical. Among the numerical ones, some are normally distributed, some aren't. 
+
+Are there any ways to quickly get a big picture of all potential features, despite of all these differences? 
+
+The `crosstable()` function in {crosstable} 📦  may be able to help in such a scenario ~ 
+
+It compares a set of features across the target groups and works well for both categorical and numeric type features. You can easily add a statistical test of group difference for EDA purposes. Tests are automatically chosen depending on the characteristics of the crossed variables (class, size, distribution, etc).
+
+Learn more about the test choice algorithm and the many more options available to tailor-make the table: https://cran.r-project.org/web/packages/crosstable/vignettes/crosstable.html
+
+data source: [German Credit data](https://www.kaggle.com/datasets/kabure/german-credit-data-with-risk)
+
+
+
+```{r, echo = FALSE}
+
+german_credit <- df %>% 
+  mutate(saving_accounts = as.factor(saving_accounts),
+         checking_account = as.factor(checking_account),
+         credit_risk = fct_rev(credit_risk)) %>% 
+  select(-id,-purpose)
+
+```
+
+
+```{r}
+
+library(crosstable)
+
+german_credit %>% 
+  crosstable(
+    german_credit %>% select(-credit_risk) %>% names(), # select all the features
+    by = credit_risk, # the target
+    percent_digits = 0, percent_pattern = "{n} ({p_col})",
+    test = TRUE
+    ) %>% 
+  as_flextable()
+
+```
+
+
+
